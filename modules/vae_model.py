@@ -129,7 +129,7 @@ class Decoder(nn.Module):
             nn.Conv2d(hidden_dims[-1], output_shape[0], kernel_size=3, padding='same'),
             nn.Sigmoid()
         ]
-        if output_shape1 != output_shape:
+        if output_shape1[1:] != output_shape[1:]:
             output_layer.insert(
                 0,
                 nn.Upsample(size=output_shape[1:], mode='bilinear')
@@ -148,36 +148,3 @@ class Decoder(nn.Module):
             x = conv_layer(x)
         x = self.output_layer(x)
         return x
-
-class KLDivDiagonalGaussian(nn.Module):
-    def __init__(self):
-        super().__init__()
-    
-    def forward(
-        self,
-        p_mu: torch.Tensor, p_var: torch.Tensor,
-        q_mu: torch.Tensor, q_var: torch.Tensor
-    ):
-        p_logvar = torch.log(p_var)
-        q_logvar = torch.log(q_var)
-        k = p_mu.shape[0]
-        kl_div = 0.5*(
-            torch.sum(p_var/q_var) + torch.sum((q_mu - p_mu)**2/q_var) - k + torch.sum(q_logvar - p_logvar)
-        )
-        return kl_div
-
-class KLDivFullGaussian(nn.Module):
-    def __init__(self):
-        super().__init__()
-    
-    def forward(
-        self,
-        p_mu: torch.Tensor, p_cov: torch.Tensor,
-        q_mu: torch.Tensor, q_cov: torch.Tensor
-    ):
-        q_cov_inv = torch.inverse(q_cov)
-        k = p_mu.shape[0]
-        kl_div = 0.5*(
-            torch.trace(q_cov_inv@p_cov) + (q_mu - p_mu)@q_cov_inv@(q_mu - p_mu) - k + torch.log(torch.det(q_cov)/torch.det(p_cov))
-        )
-        return kl_div
